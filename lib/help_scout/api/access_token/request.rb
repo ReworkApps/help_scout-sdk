@@ -18,7 +18,7 @@ module HelpScout
 
           case http_response.status
           when 200 then AccessToken.new(Response.new(http_response).body)
-          when 429 then raise API::ThrottleLimitReached, http_response.body&.dig('error')
+          when 429 then raise API::ThrottleLimitReached.new(http_response.body&.dig('error'), http_response.headers['X-RateLimit-Retry-After'].to_i)
           else raise API::InternalError, "unexpected response (status #{http_response.status})"
           end
         end

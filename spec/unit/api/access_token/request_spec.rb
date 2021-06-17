@@ -6,13 +6,15 @@ RSpec.describe HelpScout::API::AccessToken::Request do
   describe '#execute' do
     subject { request.execute }
 
+    let(:headers) { {} }
+
     before do
       WebMock.reset!
       stub_request(:post, api_path('oauth2/token'))
         .to_return(
           status: status,
           body: body,
-          headers: { 'Content-Type' => 'application/json' }
+          headers: { 'Content-Type' => 'application/json' }.merge(headers)
         )
     end
 
@@ -32,9 +34,12 @@ RSpec.describe HelpScout::API::AccessToken::Request do
       let(:status) { 429 }
       let(:error) { { error: 'Request was throttled' } }
       let(:body) { error.to_json }
+      let(:headers) { { 'X-RateLimit-Retry-After' => '1000' } }
 
       it 'raises an API::ThrottleLimitReached error' do
-        expect { subject }.to raise_error(HelpScout::API::ThrottleLimitReached, error[:error])
+        expect { subject }
+          .to raise_error(an_instance_of(HelpScout::API::ThrottleLimitReached)
+          .and having_attributes({ message: error[:error], retry_after: 1000 }))
       end
     end
 
